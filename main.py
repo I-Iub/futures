@@ -44,8 +44,8 @@ async def run_tracking(session: AsyncSession) -> None:
             responses = await asyncio.gather(btc_stream.recv(),
                                              eth_stream.recv())
             price_info = get_price_info(responses)
-            log.debug(f'BTCUSDT: price=%s, trade_time=%s '
-                      f'ETHUSDT: price=%s trade_time=%s',
+            log.debug('BTCUSDT: price=%s, trade_time=%s '
+                      'ETHUSDT: price=%s trade_time=%s',
                       price_info.btc_price, price_info.btc_trade_time,
                       price_info.eth_price, price_info.eth_trade_time)
             await check_price_change(session, price_info)

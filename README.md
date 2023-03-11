@@ -13,9 +13,10 @@ __Для соответствия условиям задачи необходи
 значения подобраны так, чтобы видеть логирующее сообщение при минимальном 
 изменении цены для наглядной демонстрации работы.__
 
-Запустите проект
+Запустите проект (не запускайте в detached режиме, иначе сообщения выводится 
+не будут)
 ```
-docker compose up
+docker compose up  # без флагов -d | --detach
 ```
 При первом запуске, пока миграции не выполнены в консоли будет логирующее 
 сообщение `ERROR - Please, check that migrations are applied`.
@@ -29,4 +30,8 @@ docker compose exec app alembic upgrade head
 ```
 futures_app  | 2023-03-11 18:15:16,062 - INFO - main:96 - The price change 
 (-1.105) has exceeded the threshold
+```
+Завершить программу:
+```
+docker compose down
 ```
