@@ -5,6 +5,7 @@ import logging
 from typing import Iterable
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.expression import and_, func, select
 from websockets import connect
 from websockets.exceptions import ConnectionClosedError
 
@@ -37,17 +38,11 @@ async def run_tracking(session: AsyncSession) -> None:
             responses = await asyncio.gather(btc_stream.recv(),
                                              eth_stream.recv())
             price_info = get_price_info(responses)
-
-            # check_price_change()
-
-            print(
-                price_info.btc_trade_time,
-                price_info.btc_price,
-                '\n',
-                price_info.eth_trade_time,
-                price_info.eth_price
-            )
-
+            log.info(f'BTCUSDT: price=%s, trade_time=%s '
+                     f'ETHUSDT: price=%s trade_time=%s',
+                     price_info.btc_price, price_info.btc_trade_time,
+                     price_info.eth_price, price_info.eth_trade_time)
+            await check_price_change(session, price_info)
             await write_to_database(session, price_info)
 
 
@@ -67,6 +62,35 @@ def get_price_info(responses: Iterable[str]) -> PriceInfo:
                      eth_trade_time=eth_trade_time,
                      btc_price=btc_price,
                      eth_price=eth_price)
+
+
+async def check_price_change(
+        session: AsyncSession, price_info: PriceInfo
+) -> None:
+    previous_time = (
+        datetime.datetime.now() - datetime.timedelta(minutes=settings.interval)
+    )
+    statement = (
+        select(func.avg(Price.btc_price), func.avg(Price.eth_price))
+        .where(and_(Price.btc_trade_time >= previous_time - settings.window,
+                    Price.btc_trade_time <= previous_time,
+                    Price.eth_trade_time >= previous_time - settings.window,
+                    Price.eth_trade_time <= previous_time))
+    )
+    result = await session.execute(statement)
+    btc_price_prev, eth_price_prev = result.first()
+    if btc_price_prev is None or eth_price_prev is None:
+        return
+    btc_change = (price_info.btc_price - btc_price_prev) / btc_price_prev * 100
+    eth_change = (price_info.eth_price - eth_price_prev) / eth_price_prev * 100
+    eth_self_change = eth_change - btc_change
+
+    if abs(eth_self_change) >= settings.thresholding:
+        rounded_change = round(eth_self_change, 3)
+        log.debug('The price change (%s %%) has exceeded the threshold',
+                  rounded_change)
+        print(f'\nИзменение цены ({rounded_change} %) '
+              f'превысило пороговое значение ({settings.thresholding} %)\n')
 
 
 async def write_to_database(session: AsyncSession, record: PriceInfo) -> None:
