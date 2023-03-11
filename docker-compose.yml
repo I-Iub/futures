@@ -1,0 +1,32 @@
+version: "3"
+services:
+  db:
+    container_name: futures_db
+    image: postgres:14.5-alpine
+    ports:
+      - "35432:5432"
+    env_file:
+      - .env
+    networks:
+      - futures_net
+    volumes:
+      - futures_data:/var/lib/postgresql/data/
+    restart: always
+
+  app:
+    container_name: futures_app
+    build:
+      context: .
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - futures_net
+    restart: always
+
+networks:
+  futures_net:
+
+volumes:
+  futures_data:
