@@ -5,16 +5,16 @@ import logging
 import time
 from typing import Iterable
 
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import and_, func, select
-from sqlalchemy.exc import ProgrammingError
 from websockets import connect
 from websockets.exceptions import ConnectionClosedError
 
 import logger
+from config import settings
 from db.database import async_session
 from db.models import Price
-from config import settings
 from models import PriceInfo
 
 log = logging.getLogger()
